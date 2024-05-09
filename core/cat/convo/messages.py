@@ -26,4 +26,5 @@ class CatMessage(BaseModelDict):
 class UserMessage(BaseModelDict):
     text: str
     user_id: str
+    filter_declarative_memory:  Dict[str, str] | None = None
 

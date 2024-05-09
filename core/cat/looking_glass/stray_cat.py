@@ -151,7 +151,11 @@ class StrayCat:
 
         self.__send_ws_json(error_message)
 
-    def recall_relevant_memories_to_working_memory(self, query=None):
+    def recall_relevant_memories_to_working_memory(
+            self,
+            query=None,
+            filter_declarative_memory: Dict[str, str] | None = None
+        ):
         """Retrieve context from memory.
 
         The method retrieves the relevant memories from the vector collections that are given as context to the LLM.
@@ -162,6 +166,9 @@ class StrayCat:
         query : str, optional
         The query used to make a similarity search in the Cat's vector memories. If not provided, the query
         will be derived from the user's message.
+
+        filter_declarative_memory : Dict[str, str], optional
+        The dictionary used to filter declarative memory by metadata.
 
         Notes
         -----
@@ -207,7 +214,7 @@ class StrayCat:
             "embedding": recall_query_embedding,
             "k": 3,
             "threshold": 0.7,
-            "metadata": None,
+            "metadata": filter_declarative_memory,
         }
 
         default_procedural_recall_config = {
@@ -313,13 +320,15 @@ class StrayCat:
             # text of latest Human message
             user_message_text = self.working_memory.user_message_json.text
 
+            filter_declarative_memory = self.working_memory.user_message_json.filter_declarative_memory
+
             # update conversation history (Human turn)
             self.working_memory.update_conversation_history(who="Human", message=user_message_text)
 
             # recall episodic and declarative memories from vector collections
             #   and store them in working_memory
             try:
-                self.recall_relevant_memories_to_working_memory()
+                self.recall_relevant_memories_to_working_memory(filter_declarative_memory=filter_declarative_memory)
             except Exception as e:
                 log.error(e)
                 traceback.print_exc(e)
