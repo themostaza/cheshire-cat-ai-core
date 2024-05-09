@@ -10,6 +10,12 @@ from cat.log import log
 
 router = APIRouter()
 
+def parse_metadata(metadata_str: str) -> Dict[str, str]:
+    metadata={}
+    for item in metadata_str.split(';'):
+        key,value = item.split(':', 1)
+        metadata[key.strip()] = value.strip()
+    return metadata
 
 # receive files via http endpoint
 @router.post("/")
@@ -17,6 +23,10 @@ async def upload_file(
     request: Request,
     file: UploadFile,
     background_tasks: BackgroundTasks,
+    metadata: str | None = Body(
+        default=None,
+        description="File metadata in the format 'key1:value 1; key2: value 2'"
+    ),
     chunk_size: int | None = Body(
         default=None,
         description="Maximum length of each chunk after the document is split (in tokens)",
@@ -27,6 +37,12 @@ async def upload_file(
     """Upload a file containing text (.txt, .md, .pdf, etc.). File content will be extracted and segmented into chunks.
     Chunks will be then vectorized and stored into documents memory.
     """
+    log.info(f"Metadata: {metadata}")
+
+    metadata_dict = {}
+
+    if metadata:
+        metadata_dict = parse_metadata(metadata)
 
     # Check the file format is supported
     admitted_types = stray.rabbit_hole.file_handlers.keys()
@@ -47,7 +63,7 @@ async def upload_file(
     background_tasks.add_task(
         # we deepcopy the file because FastAPI does not keep the file in memory after the response returns to the client
         # https://github.com/tiangolo/fastapi/discussions/10936
-        stray.rabbit_hole.ingest_file, stray, deepcopy(file), chunk_size, chunk_overlap
+        stray.rabbit_hole.ingest_file, stray, deepcopy(file), chunk_size, chunk_overlap, metadata_dict
     )
 
     # reply to client

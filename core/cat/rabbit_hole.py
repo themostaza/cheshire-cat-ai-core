@@ -3,7 +3,7 @@ import time
 import json
 import mimetypes
 import httpx
-from typing import List, Union
+from typing import List, Union, Dict
 from urllib.request import urlopen
 from urllib.parse import urlparse
 from urllib.error import HTTPError
@@ -125,6 +125,7 @@ class RabbitHole:
             file: Union[str, UploadFile],
             chunk_size: int | None = None,
             chunk_overlap: int | None = None,
+            metadata: Dict[str, str] | None = None
     ):
         """Load a file in the Cat's declarative memory.
 
@@ -140,6 +141,8 @@ class RabbitHole:
             Number of tokens in each document chunk.
         chunk_overlap : int
             Number of overlapping tokens between consecutive chunks.
+        metadata : Dict[str, str], optional
+            File metadata dictionary.
 
         Notes
         ----------
@@ -167,7 +170,8 @@ class RabbitHole:
         self.store_documents(
             stray=stray,
             docs=docs, 
-            source=filename 
+            source=filename,
+            metadata=metadata
         )
 
     def file_to_docs(
@@ -309,7 +313,7 @@ class RabbitHole:
         return docs
 
 
-    def store_documents(self, stray, docs: List[Document], source: str) -> None:
+    def store_documents(self, stray, docs: List[Document], source: str, metadata: Dict[str, str] | None = None) -> None:
         """Add documents to the Cat's declarative memory.
 
         This method loops a list of Langchain `Document` and adds some metadata. Namely, the source filename and the
@@ -321,6 +325,8 @@ class RabbitHole:
             List of Langchain `Document` to be inserted in the Cat's declarative memory.
         source : str
             Source name to be added as a metadata. It can be a file name or an URL.
+        metadata : Dict[str, str], optional
+            Document metadata dictionary.
 
         Notes
         -------
@@ -353,6 +359,10 @@ class RabbitHole:
 
             doc.metadata["source"] = source
             doc.metadata["when"] = time.time()
+            
+            if metadata is not None:
+                doc.metadata.update(metadata)
+
             doc = stray.mad_hatter.execute_hook(
                 "before_rabbithole_insert_memory", doc, cat=stray
             )
